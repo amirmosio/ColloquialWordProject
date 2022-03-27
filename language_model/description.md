@@ -1,7 +1,3 @@
-# ColloquialWordProject
-Collecting persian colloquial word dataset and language model
-
-
 # Colloquial detection
 
 First we combine colloquial data set with formal dataset from wikipedia.
@@ -11,8 +7,3 @@ After that we can process colloquial data set and check words that does not appe
 So here we need to database, one for formal words and text and one for colloquial corpses:
  - wikipedia seems a good candidate for formal dataset
  - twitter dataset for colloquial data
- 
-Using these two datasets:
- - [Persian wikipedia corpus for formal dataset](https://github.com/Text-Mining/Persian-Wikipedia-Corpus)
- - [Persian twitter corpus for colloquial dataset](https://iasbs.ac.ir/~ansari/lscp/)
- - [Persian stop words for preprocessing](https://github.com/amirshnll/persian-stop-word)

@@ -1,185 +1,120 @@
 import json
 import random
-import re
-import string
 
 import numpy as np
 import torch
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 
+from config import DEBUG_MODE
 ############################
 ##### random initializer ###
 ############################
-
+from data_load_and_processing import FormalAndColloquialDataPreProcessing
 
 torch.manual_seed(11747)
 random.seed(17757)
 np.random.seed(7171757)
+
 ######################
 ### configuration ####
 ######################
-debug_mode = False
 test_context_number = 10000
-device = torch.device("cuda" if torch.cuda.is_available() and not debug_mode else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() and not DEBUG_MODE else "cpu")
 print(f"device: {device}")
-
-
-############################
-## load and tokenize data utils ##
-############################
-class FormalAndColloquialDataPreProcessing:
-    formal_directory_path = "data/formal_dataset/"
-    formal_file_paths = ['fawiki-20181001-pages-articles-multistream 1 - 100000.json',
-                         'fawiki-20181001-pages-articles-multistream 100001 - 290169.json',
-                         'fawiki-20181001-pages-articles-multistream 290170 - 580338.json',
-                         'fawiki-20181001-pages-articles-multistream 580339 - 870507.json',
-                         'fawiki-20181001-pages-articles-multistream 870508 - 1160676.json']
-    colloquial_file_path = 'data/colloquial_dataset/lscp-0.5-fa.txt'
-    stop_words_file_path = 'data/stop_words.json'
-
-    def __init__(self):
-        self.pre_processing_functions = [self.remove_emoji_from_text,
-                                         self.remove_english_char_from_text,
-                                         self.remove_signs,
-                                         self.remove_url_from_text, self.remove_extra_spaces]
-        with open(self.stop_words_file_path, 'rb') as file:
-            self.stop_words = json.loads(file.read())['stopWords']
-
-    def bring_processed_formal_tokens(self, file_index: int):
-        # tokenize
-        data = self._load_raw_formal_data(file_index)
-        for context_id in range(len(data)):
-            for proc in self.pre_processing_functions:
-                data[context_id] = proc(data[context_id])
-        return [self.remove_stop_words(self.tokenize_text(context)) for context in data]
-
-    def bring_processed_colloquial_tokens(self):
-        # tokenize
-        data = self._load_raw_colloquial_data()
-        for context_id in range(len(data)):
-            for proc in self.pre_processing_functions:
-                data[context_id] = proc(data[context_id])
-        return [self.remove_stop_words(self.tokenize_text(context)) for context in data]
-
-    def _load_raw_formal_data(self, file_index):
-        with open(self.formal_directory_path + self.formal_file_paths[file_index], 'rb') as file:
-            data_texts = []
-            for article in file:
-                article = article.decode('utf-8')
-                if article != "":
-                    for context in json.loads(article)['Text'].split("\n"):
-                        data_texts.append(context)
-                if debug_mode and len(data_texts) >= test_context_number:
-                    break
-        return data_texts
-
-    def _load_raw_colloquial_data(self):
-        with open(self.colloquial_file_path, 'rb') as file:
-            data_texts = []
-            for context in file:
-                context = context.decode('utf-8').strip()
-                if context.startswith("RT : "):
-                    context = context[5:]
-                data_texts.append(context)
-                if debug_mode and len(data_texts) >= test_context_number:
-                    break
-        return data_texts
-
-    @staticmethod
-    def tokenize_text(text):
-        return text.split()
-
-    @staticmethod
-    def remove_emoji_from_text(text):
-        emoji_pattern = re.compile("["
-                                   u"\U0001F600-\U0001F64F"  # emoticons
-                                   u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-                                   u"\U0001F680-\U0001F6FF"  # transport & map symbols
-                                   u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                                   "]+", flags=re.UNICODE)
-        return emoji_pattern.sub(r' ', text)
-
-    @staticmethod
-    def remove_url_from_text(text):
-        return re.sub(r'^https?:\/\/.*[\r\n]*', ' ', text, flags=re.MULTILINE)
-
-    @staticmethod
-    def remove_english_char_from_text(text):
-        return re.sub(r'[a-zA-Z]', ' ', text, flags=re.MULTILINE)
-
-    @staticmethod
-    def remove_signs(text):
-        for char in string.punctuation:
-            text = text.replace(char, ' ')
-        return text
-
-    @staticmethod
-    def remove_extra_spaces(text):
-        return re.sub(r'\s+', ' ', text, flags=re.MULTILINE)
-
-    def remove_stop_words(self, tokens):
-        res = []
-        for token in tokens:
-            if token not in self.stop_words:
-                res.append(token)
-        return res
 
 
 ##########################
 ### training word2vec ####
 ##########################
-class CallBack(CallbackAny2Vec):
-    def __init__(self):
-        self.epoch = 0
+class LanguageModelService:
+    model_path = "language_model/word2vec.model"
+    formal_tokens_path = "language_model/formal_tokens.json"
+    epochs = 10
 
-    def on_train_begin(self, model):
-        print('Training began ...')
-        pass
+    class CallBack(CallbackAny2Vec):
+        def __init__(self):
+            self.epoch = 0
 
-    def on_epoch_end(self, model):
-        self.epoch += 1
-        print(self.epoch, " form ", model.epochs)
-
-
-def initial_train_word2vec():
-    formal_tokens = provider.bring_processed_formal_tokens(0)
-    colloquial_tokens = provider.bring_processed_colloquial_tokens()
-    model = Word2Vec(sentences=formal_tokens + colloquial_tokens, vector_size=200, window=5, workers=4, epochs=10,
-                     callbacks=(CallBack(),))
-    model.save("word2vec.model")
-
-
-def train_extra_files(file_index, model=None):
-    if model is None:
-        model = Word2Vec.load("word2vec.model")
-    formal_tokens = provider.bring_processed_formal_tokens(file_index)
-    model.train(formal_tokens, total_examples=1, epochs=1)
-    model.save("word2vec.model")
-    return model
-
-
-def manual_tests(model=None):
-    if model is None:
-        model = Word2Vec.load("word2vec.model")
-    res = ["احمق", "افسرده", "بیهوش", "باهوش", "تاریک", "طولانی", "پیراهن", "تشک", "قشنگ"]
-    res += ["دیوونه", "موندن", "کرمون", "برین", "بزنگ", "تاحالا", "یه", "داش", "تو", "توی", "یکم", "معتاد"]
-    for word in res:
-        print("############")
-        try:
-            vector = model.wv[word]  # get numpy vector of a word
-            print(word)
-            print([i[0] for i in model.wv.most_similar(word, topn=8)])
-        except:
+        def on_train_begin(self, model):
+            print('Training began ..., it may take a while!')
             pass
 
+        def on_epoch_end(self, model):
+            self.epoch += 1
+            print(str(self.epoch) + "\\" + str(model.epochs), end=" - " if self.epoch != model.epochs else "\n")
 
-if __name__ == '__main__':
-    provider = FormalAndColloquialDataPreProcessing()
-    # initial_train_word2vec()
-    model = train_extra_files(1)
-    model = train_extra_files(2, model=model)
-    model = train_extra_files(3, model=model)
-    model = train_extra_files(4, model=model)
+    def __init__(self, load_model=True):
+        self.provider = FormalAndColloquialDataPreProcessing()
+        self.model = self.load_model() if load_model else None
+        self.formal_tokens = self.load_formal_tokens_json() if load_model else set()
 
-    manual_tests(model=model)
+    def load_model(self):
+        return Word2Vec.load(self.model_path)
+
+    def save_model(self):
+        if not DEBUG_MODE:
+            self.model.save(self.model_path)
+
+    def train_new_text(self, tokens, epoch=None):
+        self.model.min_count = 1
+        self.model.train(tokens, total_examples=len(tokens), epochs=epoch if epoch else self.epochs,
+                         callbacks=(self.CallBack(),))
+        self.save_model()
+
+    def train_model(self):
+
+        all_tokens = self.provider.bring_processed_colloquial_tokens()
+        for i in range(5):
+            all_tokens += self.provider.bring_processed_formal_tokens(i)
+        self.model = Word2Vec(sentences=all_tokens, vector_size=200, window=5, workers=4, epochs=self.epochs,
+                              callbacks=(self.CallBack(),), min_count=1)
+        self.save_model()
+
+    """
+    Formal Tokens List
+    """
+
+    def process_all_formal_tokens_and_save(self):
+        for i in range(5):
+            tokens = self.provider.bring_processed_formal_tokens(i)
+            for context in tokens:
+                self.formal_tokens.update(context)
+
+        with open(LanguageModelService.formal_tokens_path, 'w') as file:
+            file.write(json.dumps(list(self.formal_tokens)))
+
+    @classmethod
+    def load_formal_tokens_json(cls):
+        with open(cls.formal_tokens_path, 'rb') as file:
+            formal_tokens = json.loads(file.read())
+        return formal_tokens
+
+    def get_similar_words_from_formal_or_both(self, positive=None, negative=None, topn=8, just_return_formals=True):
+        try:
+            res = {}
+            coeff_constant = 4  # maybe a good estimates for colloquial_tokens/formal_tokens
+            while len(res) != topn:
+                for token, distance in self.model.wv.most_similar(positive=positive, negative=negative,
+                                                                  topn=topn * coeff_constant):
+                    if token not in res and (not just_return_formals or token in self.formal_tokens):
+                        res[token] = round(distance, 3)
+                        if len(res) == topn:
+                            break
+                coeff_constant *= 2
+            return res
+        except:
+            return None
+
+    """
+    Unknown Colloquial Tokens
+    """
+
+    def get_back_interesting_token_and_similar_words(self, text):
+        text_tokens = self.provider.bring_custom_text_tokens(text)[0]
+        for token in text_tokens:
+            if token not in self.formal_tokens:
+                sim_words = self.get_similar_words_from_formal_or_both(token, topn=9)
+                if sim_words:
+                    return token, sim_words
+        return None, None

@@ -77,8 +77,12 @@ class LanguageModelService:
 
     def process_all_formal_tokens_and_save(self):
         for i in range(5):
-            tokens = self.provider.bring_processed_formal_tokens(i)
-            for context in tokens:
+            for context in self.provider.bring_processed_formal_tokens(i):
+                if DEBUG_MODE:
+                    for word in ['جوریم', 'دیوونم', 'دیوونس', 'خونس']:
+                        if word in context:
+                            print("found one!")
+                            breakpoint()
                 self.formal_tokens.update(context)
 
         with open(LanguageModelService.formal_tokens_path, 'w') as file:

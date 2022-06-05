@@ -43,7 +43,7 @@ class FormalAndColloquialDataPreProcessing:
         for context_id in range(len(data)):
             for proc in self.pre_processing_functions:
                 data[context_id] = proc(data[context_id])
-        return [self.remove_stop_words(self.tokenize_text(context)) for context in data]
+            yield self.remove_stop_words(self.tokenize_text(data[context_id]))
 
     def bring_processed_colloquial_tokens(self):
         # tokenize

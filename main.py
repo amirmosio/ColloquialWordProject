@@ -1,11 +1,21 @@
-from language_model.word2vec import LanguageModelService
-from telegram_bot import BotConfiguration
+import random
+import time
+
+import cachetools.func
+
+
+@cachetools.func.ttl_cache(maxsize=None, ttl=4)
+def test(seed):
+    print("test")
+    return str(seed) + ":" + str(random.random())
+
 
 if __name__ == '__main__':
-    language_model_service = LanguageModelService()
-
-    conf = BotConfiguration(language_model_service)
-    print('running bot:')
-
-    conf.bot.polling(none_stop=True, interval=10, timeout=1000)
-
+    for i in range(6):
+        print(test(7))
+        time.sleep(1)
+    print("asdfadf")
+    for i in range(6):
+        print(test(15))
+        print(test(7))
+        time.sleep(1)

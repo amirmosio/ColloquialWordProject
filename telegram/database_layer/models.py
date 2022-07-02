@@ -2,24 +2,20 @@ import datetime
 
 from peewee import *
 
-db = SqliteDatabase('my_database.db')
+user_database = SqliteDatabase('peewee_database.db')
 
 
 class BaseModel(Model):
     created_date = DateTimeField(default=datetime.datetime.now)
 
     class Meta:
-        database = db
-
-
-class User(BaseModel):
-    chat_id = CharField(unique=True, primary_key=True)
-    selected_channel = CharField(null=True)
+        database = user_database
 
 
 class ColloquialQuestion(BaseModel):
     id = AutoField()
     request_word = CharField()
+    choice0 = CharField()
     choice1 = CharField()
     choice2 = CharField()
     choice3 = CharField()
@@ -28,7 +24,6 @@ class ColloquialQuestion(BaseModel):
     choice6 = CharField()
     choice7 = CharField()
     choice8 = CharField()
-    choice9 = CharField()
     done = BooleanField(default=False)
     user_selected_choice = SmallIntegerField(null=True)
 
@@ -36,11 +31,20 @@ class ColloquialQuestion(BaseModel):
         return getattr(self, f"choice{i}")
 
 
+class User(BaseModel):
+    user_id = BigIntegerField(unique=True, primary_key=True)
+    chat_id = CharField(null=True)
+    username = CharField(null=True)
+    selected_channel = CharField(null=True)
+    score = IntegerField(default=0)
+    introducer_username = CharField(null=True)
+
+
 class UserAnswers(BaseModel):
     user = ForeignKeyField(User, backref='u_answers')
     question = ForeignKeyField(ColloquialQuestion, backref='q_answers')
-    choice = SmallIntegerField()  # 0, ..., 10
+    choice = SmallIntegerField()  # 0, ..., 9
 
 
-db.connect()
-db.create_tables([User, ColloquialQuestion, UserAnswers])
+user_database.connect()
+user_database.create_tables([User, ColloquialQuestion, UserAnswers])

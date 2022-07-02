@@ -2,6 +2,7 @@
 language_model/data/
 *.session
 *.session-journal
+*.db
 # language model weights
 language_model/word2vec.model
 language_model/word2vec.model.syn1neg.npy

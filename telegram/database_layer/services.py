@@ -1,6 +1,6 @@
-from constants import Constants
+from constants import Constants, OutPutMessages
 from exceptions import AlreadyHasIntroducer, IntroducerNotFound, YouIntroducedThisUserCanNotBeenIntroducer, \
-    UserNotFound, AnsweredBefore, NoQuestionReadyToAnswerWait
+    UserNotFound, AnsweredBeforeByTheUser, NoQuestionReadyToAnswerWait
 from models import User, ColloquialQuestion, UserAnswers
 
 
@@ -34,6 +34,11 @@ class SqliteQueryServices:
     def check_score_for_music(self, user_id):
         return self.get_user(user_id).score >= Constants.music_cost
 
+    def take_score_for_music(self, user_id):
+        user = self.get_user(user_id)
+        user.score -= Constants.music_cost
+        user.save()
+
     def get_user_introducer(self, user_id):
         return self.get_user(user_id).introducer_username.lower()
 
@@ -59,9 +64,14 @@ class SqliteQueryServices:
         else:
             raise AlreadyHasIntroducer()
 
-    def create_question(self, request_word, nine_choice_list):
-        choices = {f"choice{i}": nine_choice_list[i] for i in range(9)}
-        return ColloquialQuestion.get_or_create(request_word=request_word, **choices)[0]
+    def create_question(self, request_word, nine_choice_list, nine_choice_score_list=None):
+        data = {f"choice{i}": nine_choice_list[i] for i in range(9)}
+        if nine_choice_score_list:
+            data.update({f"choice{i}_score": nine_choice_score_list[i] for i in range(9)})
+
+        data["choice9"] = OutPutMessages.none_of_the_above_options
+
+        return ColloquialQuestion.get_or_create(request_word=request_word, **data)[0]
 
     def answer_question(self, question_id, user_id, choice):
         question = ColloquialQuestion.get_by_id(question_id)
@@ -75,10 +85,13 @@ class SqliteQueryServices:
             user.score += Constants.question_answer_score
             user.save()
         else:
-            raise AnsweredBefore()
+            raise AnsweredBeforeByTheUser()
 
     def get_question(self, question_id):
         return ColloquialQuestion.get_by_id(question_id)
+
+    def get_question_by_request_word(self, request_word):
+        return ColloquialQuestion.get_or_none(request_word=request_word)
 
     def select_a_new_question_for_user(self, user_id):
         if Constants.DEBUG and not ColloquialQuestion.select().exists():
@@ -94,12 +107,12 @@ class SqliteQueryServices:
             return questions.first()
         raise NoQuestionReadyToAnswerWait()
 
-    def check_question_update_done_with_final_answer(self, question_id):
+    def check_question_update_done_with_final_answer_just_get_done(self, question_id):
         min_user_threshold = 5
         min_percent_threshold = 0.8
         question = ColloquialQuestion.get(id=question_id)
         if question.done:
-            return question
+            return False
         answers = question.q_answers
         answer_dict = {}
         for answer in answers:
@@ -114,6 +127,7 @@ class SqliteQueryServices:
                 question.user_selected_choice = key
                 question.save()
                 # handle wrong answers TODO
+
                 return question
         return False
 
@@ -124,6 +138,12 @@ class SqliteQueryServices:
         final_option = question.user_selected_choice
         wrong_users = question.q_answers.select().where((UserAnswers.choice == final_option)).select(UserAnswers.user)
         return wrong_users
+
+    def punish_user_with_wrong_answer(self, wrong_user=None, wrong_user_id=None):
+        if wrong_user_id:
+            wrong_user = self.get_user(wrong_user_id)
+        wrong_user.score += Constants.question_wrong_answer_score
+        wrong_user.save()
 
 
 if __name__ == '__main__':

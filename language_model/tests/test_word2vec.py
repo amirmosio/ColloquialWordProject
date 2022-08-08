@@ -1,12 +1,12 @@
 from data_load_and_processing import FormalAndColloquialDataPreProcessing
-from word2vec import LanguageModelService
+from word2vec import Wor2VecLanguageModel
 
 if __name__ == '__main__':
     """
     initial address config
     """
-    LanguageModelService.model_path = "word2vec.model"
-    LanguageModelService.formal_tokens_path = "formal_tokens.json"
+    Wor2VecLanguageModel.model_path = "word2vec.model"
+    Wor2VecLanguageModel.formal_tokens_path = "formal_tokens.json"
     FormalAndColloquialDataPreProcessing.formal_directory_path = "data/formal_dataset/"
     FormalAndColloquialDataPreProcessing.colloquial_file_path = 'data/colloquial_dataset/lscp-0.5-fa.txt'
     FormalAndColloquialDataPreProcessing.stop_words_file_path = 'data/stop_words.json'
@@ -23,8 +23,8 @@ if __name__ == '__main__':
     test w2v model
     """
 
-    language_model_service = LanguageModelService()
-    LanguageModelService.model_path = "word2vec_test.model"
+    language_model_service = Wor2VecLanguageModel()
+    Wor2VecLanguageModel.model_path = "word2vec_test.model"
 
     res = ["احمق", "افسرده", "بیهوش", "باهوش", "تاریک", "طولانی", "پیرهن", "تشک", "قشنگ"]
     res += ["دیوونه", "موندن", "کرمون", "برین", "بزنگ", "تاحالا", "یه", "داش", "تو", "توی", "یکم", "معتاد"]

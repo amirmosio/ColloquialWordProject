@@ -5,7 +5,7 @@ from hazm import Lemmatizer
 
 from data_load_and_processing import FormalAndColloquialDataPreProcessing
 from hooshvare_bert import fill_mask, word_vector_in_context
-from word2vec import LanguageModelService
+from word2vec import Word2VecLanguageModelService
 
 if __name__ == '__main__':
 
@@ -15,16 +15,16 @@ if __name__ == '__main__':
     """
     initial address config
     """
-    LanguageModelService.model_path = "word2vec.model"
-    LanguageModelService.formal_tokens_path = "formal_tokens.json"
+    Word2VecLanguageModelService.model_path = "word2vec.model"
+    Word2VecLanguageModelService.formal_tokens_path = "formal_tokens.json"
     FormalAndColloquialDataPreProcessing.formal_directory_path = "data/formal_dataset/"
     FormalAndColloquialDataPreProcessing.colloquial_file_path = 'data/colloquial_dataset/lscp-0.5-fa.txt'
     FormalAndColloquialDataPreProcessing.stop_words_file_path = 'data/stop_words.json'
-    language_model_service = LanguageModelService()
-    LanguageModelService.model_path = "word2vec_test.model"
+    language_model_service = Word2VecLanguageModelService()
+    Word2VecLanguageModelService.model_path = "word2vec_test.model"
     with open("dev_test.json", 'rb') as dev_data:
         sample_sentences = json.loads(dev_data.read())
-    lemer = Lemmatizer()
+        lemer = Lemmatizer()
 
     for word in ["کرمون"]:
         print("\nNew Word")

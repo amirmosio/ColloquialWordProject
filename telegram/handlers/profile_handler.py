@@ -2,7 +2,7 @@ import re
 
 import telebot
 
-from constants import OutPutMessages
+from constants import OutPutMessages, Commands
 from exceptions import _MyExceptions
 from telegram_client import MusicChannelForResearchClient
 
@@ -16,12 +16,23 @@ async def update_pin_message(client_bot_handler, user_id, chat_id, message_id=No
                                                                    chat_id=chat_id, message_id=message_id)
         await client_bot_handler.telebotConf.bot.pin_chat_message(chat_id=chat_id, message_id=message_id)
     else:
+        # prev_message = (await client_bot_handler.telebotConf.bot.get_chat(chat_id)).pinned_message
+        # if prev_message:
+        #     try:
+        #         message = await client_bot_handler.telebotConf.bot.edit_message_text(state_text, user_id,
+        #                                                                              message_id=prev_message.id)
+        #         await client_bot_handler.telebotConf.bot.pin_chat_message(chat_id, message.id)
+        #     except Exception as e:
+        #         print(e)
+        #         message = await client_bot_handler.telebotConf.bot.send_message(text=state_text, chat_id=chat_id)
+        #         await client_bot_handler.telebotConf.bot.pin_chat_message(chat_id, message.id)
+        # else:
         message = await client_bot_handler.telebotConf.bot.send_message(text=state_text, chat_id=chat_id)
         await client_bot_handler.telebotConf.bot.pin_chat_message(chat_id, message.id)
 
 
 def handler_profile(client_bot_handler):
-    @client_bot_handler.telebotConf.bot.message_handler(commands=['start'])
+    @client_bot_handler.telebotConf.bot.message_handler(commands=[Commands.start])
     async def start_message(message):
         chat_id = message.chat.id
         user = client_bot_handler.database_utility.register_user(message.from_user, chat_id)
@@ -35,6 +46,11 @@ def handler_profile(client_bot_handler):
                                                           callback_data=f'set_introducer'))
             await client_bot_handler.telebotConf.bot.send_message(chat_id=chat_id, text=OutPutMessages.start_message(),
                                                                   reply_markup=markup)
+
+    @client_bot_handler.telebotConf.bot.message_handler(commands=[Commands.about_us])
+    async def about_us_message(message):
+        chat_id = message.chat.id
+        await client_bot_handler.telebotConf.bot.send_message(chat_id=chat_id, text=OutPutMessages.about_us)
 
     @client_bot_handler.telebotConf.bot.callback_query_handler(func=lambda call: call.data == "set_introducer")
     async def on_introducer_button_tap(call):
@@ -68,7 +84,7 @@ def handler_profile(client_bot_handler):
             await client_bot_handler.telebotConf.bot.send_message(chat_id=chat_id,
                                                                   text=OutPutMessages.wrong_format_for_username)
 
-    @client_bot_handler.telebotConf.bot.message_handler(commands=['show_channels'])
+    @client_bot_handler.telebotConf.bot.message_handler(commands=[Commands.show_channels])
     async def show_channel_list(message):
         chat_id = message.chat.id
         channels = MusicChannelForResearchClient.telegram_music_channels
@@ -89,11 +105,10 @@ def handler_profile(client_bot_handler):
         await client_bot_handler.telebotConf.bot.edit_message_reply_markup(call.from_user.id,
                                                                            message_id=call.message.message_id,
                                                                            reply_markup=None)
-        selected_channel = call.data[7:]
+        selected_channel = call.data[15:]
         client_bot_handler.database_utility.change_user_channel(call.from_user.id, selected_channel)
         musics = await client_bot_handler.my_client.get_channel_all_music_counts(selected_channel)
         await client_bot_handler.telebotConf.bot.edit_message_text(
             OutPutMessages.good_choice_music_condition(selected_channel, musics),
             call.from_user.id, message_id=call.message.message_id)
-        await client_bot_handler.telebotConf.bot.unpin_all_chat_messages(call.from_user.id)
-        await client_bot_handler.telebotConf.bot.pin_chat_message(call.from_user.id, call.message.message_id)
+        await update_pin_message(client_bot_handler, call.from_user.id, call.message.chat.id)

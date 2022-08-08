@@ -26,9 +26,14 @@ class UserNotFound(_MyExceptions):
         super().__init__(OutPutMessages.user_not_found_start_first)
 
 
-class AnsweredBefore(_MyExceptions):
+class AnsweredBeforeByTheUser(_MyExceptions):
     def __init__(self):
         super().__init__(OutPutMessages.you_have_answered_this_before)
+
+
+class DoneBefore(_MyExceptions):
+    def __init__(self):
+        super().__init__(OutPutMessages.done_before)
 
 
 class NoQuestionReadyToAnswerWait(_MyExceptions):
@@ -42,8 +47,12 @@ def handle_my_exceptions(bot):
             chat_id = message.chat.id
             try:
                 return await func(message)
-            except _MyExceptions as e:
-                await bot.send_message(chat_id=chat_id, text=e.message)
+            except Exception as e:
+                if isinstance(e, _MyExceptions):
+                    await bot.send_message(chat_id=chat_id, text=e.message)
+                else:
+                    print(e)
+                    await bot.send_message(chat_id=chat_id, text=OutPutMessages.internal_error_call_support)
 
         return func_wrapper
 

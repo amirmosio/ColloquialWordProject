@@ -6,12 +6,15 @@ from datetime import datetime
 
 import cachetools.func
 from decouple import config
-from telethon import TelegramClient
+from telethon import TelegramClient, events
 from telethon.tl.functions.channels import GetFullChannelRequest
 from telethon.tl.functions.messages import SearchRequest
 from telethon.tl.types import InputMessagesFilterMusic
 
 from CommandHandler import ColloquialCommandHandler
+from config import Constants
+from data_load_and_processing import PreprocessUtilities
+from services import SqliteQueryServices
 
 phone_number = config('TELEGRAM_CLIENT_PHONE_NUMBER')
 api_id = config('TELEGRAM_CLIENT_API_ID')
@@ -21,8 +24,36 @@ api_hash = config('TELEGRAM_CLIENT_API_HASH')
 class MusicChannelForResearchClient:
     telegram_music_channels = ["sharethejoy", "RadioRelax", "bikalammusic", "vmusicir"]
 
-    def __init__(self):
+    def __init__(self, language_model_service):
         self.client = TelegramClient("my research client", api_id, api_hash)
+        self.preprocess_utils = PreprocessUtilities()
+        self.pre_processing_functions = [self.preprocess_utils.remove_emoji_from_text,
+                                         self.preprocess_utils.remove_english_char_from_text,
+                                         self.preprocess_utils.remove_signs,
+                                         self.preprocess_utils.remove_url_from_text,
+                                         self.preprocess_utils.remove_extra_spaces,
+                                         self.preprocess_utils.remove_half_space]
+        self.database_utility: SqliteQueryServices = SqliteQueryServices()
+        self.language_model_service = language_model_service
+
+        @self.client.on(events.NewMessage())
+        async def handler(event):
+            if not (event.is_group and not event.is_private):
+                return
+            text = event.raw_text
+            text_sentences = self.preprocess_utils.split_sentences(text)
+            for sentence in text_sentences:
+                if not (self.preprocess_utils.remove_english_char_from_text(sentence) == sentence and
+                        len(sentence.split()) >= 4):
+                    continue
+                for p_func in self.pre_processing_functions:
+                    sentence = p_func(sentence)
+                res = self.language_model_service.get_colloq_question_if_exists(sentence)
+                if res:
+                    token, scores = res
+                    if not self.database_utility.get_question_by_request_word(token):
+                        self.database_utility.create_question(token, list(scores.keys()), list(scores.values()))
+                self.language_model_service.train_model_with_new_sentence_and_save_eventually(sentence)
 
     async def __aenter__(self):
         await self.client.connect()
@@ -101,9 +132,9 @@ class MusicChannelForResearchClient:
         return musics_score_tuples[-1][1]
 
     async def send_client_message_to_my_bot(self, message):
-        bot_username = "fa_cwc_bot"
+        bot_username = Constants.bot_user_name
         entity = await self.client.get_entity(bot_username)
-        return await self.client.forward_messages(entity, message)
+        return await self.client.send_message(entity, message)
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.client.disconnect()

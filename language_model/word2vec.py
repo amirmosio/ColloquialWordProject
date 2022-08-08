@@ -6,10 +6,10 @@ import torch
 from gensim.models import Word2Vec
 from gensim.models.callbacks import CallbackAny2Vec
 
-from config import DEBUG_MODE
 ############################
 ##### random initializer ###
 ############################
+from constants import Constants
 from data_load_and_processing import FormalAndColloquialDataPreProcessing
 
 torch.manual_seed(11747)
@@ -20,14 +20,14 @@ np.random.seed(7171757)
 ### configuration ####
 ######################
 test_context_number = 10000
-device = torch.device("cuda" if torch.cuda.is_available() and not DEBUG_MODE else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() and not Constants.DEBUG else "cpu")
 print(f"device: {device}")
 
 
 ##########################
 ### training word2vec ####
 ##########################
-class LanguageModelService:
+class Word2VecLanguageModelService:
     model_path = "language_model/word2vec.model"
     formal_tokens_path = "language_model/formal_tokens.json"
     epochs = 10
@@ -53,14 +53,13 @@ class LanguageModelService:
         return Word2Vec.load(self.model_path)
 
     def save_model(self):
-        if not DEBUG_MODE:
+        if not Constants.DEBUG:
             self.model.save(self.model_path)
 
     def train_new_text(self, tokens, epoch=None):
         self.model.min_count = 1
         self.model.train(tokens, total_examples=len(tokens), epochs=epoch if epoch else self.epochs,
                          callbacks=(self.CallBack(),))
-        self.save_model()
 
     def train_model(self):
 
@@ -78,14 +77,14 @@ class LanguageModelService:
     def process_all_formal_tokens_and_save(self):
         for i in range(5):
             for context in self.provider.bring_processed_formal_tokens(i):
-                if DEBUG_MODE:
+                if Constants.DEBUG:
                     for word in ['جوریم', 'دیوونم', 'دیوونس', 'خونس']:
                         if word in context:
                             print("found one!")
                             breakpoint()
                 self.formal_tokens.update(context)
 
-        with open(LanguageModelService.formal_tokens_path, 'w') as file:
+        with open(self.formal_tokens_path, 'w') as file:
             file.write(json.dumps(list(self.formal_tokens)))
 
     @classmethod
@@ -94,7 +93,7 @@ class LanguageModelService:
             formal_tokens = json.loads(file.read())
         return formal_tokens
 
-    def get_similar_words_from_formal_or_both(self, positive=None, negative=None, topn=8, just_return_formals=True):
+    def get_similar_words_from_formal_or_both(self, positive=None, negative=None, topn=9, just_return_formals=True):
         try:
             res = {}
             coeff_constant = 4  # maybe a good estimates for colloquial_tokens/formal_tokens
@@ -102,12 +101,12 @@ class LanguageModelService:
                 for token, distance in self.model.wv.most_similar(positive=positive, negative=negative,
                                                                   topn=topn * coeff_constant):
                     if token not in res and (not just_return_formals or token in self.formal_tokens):
-                        res[token] = round(distance, 3)
+                        res[token] = round(1 / distance, 3)
                         if len(res) == topn:
                             break
                 coeff_constant *= 2
             return res
-        except:
+        except Exception as e:
             return None
 
     """

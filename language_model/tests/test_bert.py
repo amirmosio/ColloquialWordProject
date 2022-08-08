@@ -1,4 +1,4 @@
-from hooshvare_bert import fill_mask, model, tokenizer, word_vector_in_context
+from ..hooshvare_bert import fill_mask, model, tokenizer, word_vector_in_context
 
 if __name__ == '__main__':
 

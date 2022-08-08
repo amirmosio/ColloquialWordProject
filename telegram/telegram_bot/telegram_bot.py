@@ -3,14 +3,14 @@ import asyncio
 import telebot.async_telebot as telebot
 from decouple import config
 
-from word2vec import LanguageModelService
+from word2vec import Word2VecLanguageModelService
 
 
 class BotConfiguration:
     def __init__(self, language_model_service=None):
         self.bot_token = config('TELEGRAM_BOT_API_TOKEN')
         self.bot = telebot.AsyncTeleBot(self.bot_token)
-        self.language_model_service: LanguageModelService = language_model_service
+        self.language_model_service: Word2VecLanguageModelService = language_model_service
 
 
 if __name__ == '__main__':

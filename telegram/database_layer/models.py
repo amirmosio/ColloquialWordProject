@@ -15,20 +15,42 @@ class BaseModel(Model):
 class ColloquialQuestion(BaseModel):
     id = AutoField()
     request_word = CharField()
+
     choice0 = CharField()
+    choice0_score = DoubleField(default=0.1, null=False)
     choice1 = CharField()
+    choice1_score = DoubleField(default=0.1, null=False)
     choice2 = CharField()
+    choice2_score = DoubleField(default=0.1, null=False)
     choice3 = CharField()
+    choice3_score = DoubleField(default=0.1, null=False)
     choice4 = CharField()
+    choice4_score = DoubleField(default=0.1, null=False)
     choice5 = CharField()
+    choice5_score = DoubleField(default=0.1, null=False)
     choice6 = CharField()
+    choice6_score = DoubleField(default=0.1, null=False)
     choice7 = CharField()
+    choice7_score = DoubleField(default=0.1, null=False)
     choice8 = CharField()
+    choice8_score = DoubleField(default=0.1, null=False)
+    choice9 = CharField()
+    choice9_score = DoubleField(default=0.1, null=False)
+
     done = BooleanField(default=False)
     user_selected_choice = SmallIntegerField(null=True)
 
     def get_choice_by_number(self, i):
         return getattr(self, f"choice{i}")
+
+    def set_choice_by_number(self, i, value):
+        return setattr(self, f"choice{i}", value)
+
+    def get_choice_score_by_number(self, i):
+        return getattr(self, f"choice{i}")
+
+    def set_choice_score_by_number(self, i, value):
+        return setattr(self, f"choice{i}", value)
 
 
 class User(BaseModel):

@@ -1,5 +1,6 @@
 # data
-language_model/data/
+language_model/data/formal_dataset
+language_model/data/colloquial_dataset
 *.session
 *.session-journal
 *.db

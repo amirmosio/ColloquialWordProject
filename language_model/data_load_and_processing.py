@@ -1,7 +1,7 @@
 import json
 import re
 import string
-
+from hazm import word_tokenize, Lemmatizer
 ######################
 ### configuration ####
 ######################
@@ -15,8 +15,10 @@ test_context_number = 10000
 
 
 class PreprocessUtilities:
+    lemmatizer = Lemmatizer()
+
     def __init__(self, stop_words=None):
-        self.stop_words = stop_words
+        self.stop_words = stop_words if stop_words else []
         self.end_of_sentence_sings = [".", "?", "؟", "!", ";", "؛", ":"]
 
     def split_sentences(self, text):
@@ -59,9 +61,13 @@ class PreprocessUtilities:
 
     @staticmethod
     def remove_half_space(text):
-        # TODO
-        return text
-        # return re.sub(r'\u200c', ' ', text, flags=re.MULTILINE)
+        return re.sub(r'\u200c', ' ', text, flags=re.MULTILINE)
+
+    @staticmethod
+    def remove_inflections(text):
+        tokens = word_tokenize(text)
+        lemma_tokens = [PreprocessUtilities.lemmatizer.lemmatize(w) for w in tokens]
+        return " ".join(lemma_tokens)
 
 
 class FormalAndColloquialDataPreProcessing:
@@ -133,3 +139,15 @@ class FormalAndColloquialDataPreProcessing:
     @staticmethod
     def tokenize_text(text):
         return text.split()
+
+
+if __name__ == '__main__':
+    # FormalAndColloquialDataPreProcessing.formal_directory_path = "data/formal_dataset/"
+    # FormalAndColloquialDataPreProcessing.stop_words_file_path = "data/stop_words.json"
+    # for i in FormalAndColloquialDataPreProcessing()._load_raw_formal_data(1):
+    #     print(i)
+
+    FormalAndColloquialDataPreProcessing.colloquial_file_path = "data/colloquial_dataset/lscp-0.5-fa.txt"
+    FormalAndColloquialDataPreProcessing.stop_words_file_path = "data/stop_words.json"
+    for i in FormalAndColloquialDataPreProcessing()._load_raw_colloquial_data():
+        print(i)

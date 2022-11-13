@@ -5,21 +5,31 @@ from hazm import word_tokenize, Lemmatizer
 ######################
 ### configuration ####
 ######################
-from constants import Constants
+from constants import Configs
+from tqdm import tqdm
+
 
 ############################
 ##### random initializer ###
 ############################
 
-test_context_number = 10000
-
 
 class PreprocessUtilities:
     lemmatizer = Lemmatizer()
+    punctuation = string.punctuation + '،؟'
 
-    def __init__(self, stop_words=None):
+    def __init__(self, stop_words):
         self.stop_words = stop_words if stop_words else []
-        self.end_of_sentence_sings = [".", "?", "؟", "!", ";", "؛", ":"]
+        self.end_of_sentence_sings = [".", "?", "؟", "!", ";", "؛", ":", "\n"]
+
+        self.pre_processing_functions = [self.remove_emoji_from_text,
+                                         self.remove_english_char_from_text,
+                                         self.remove_signs,
+                                         self.remove_digits_and_replace_digits_sign,
+                                         self.remove_url_from_text,
+                                         self.remove_extra_spaces,
+                                         self.remove_half_space,
+                                         self.remove_inflections]
 
     def split_sentences(self, text):
         return re.split(f"|".join(["\\" + i for i in self.end_of_sentence_sings]), text)
@@ -39,12 +49,16 @@ class PreprocessUtilities:
         return re.sub(r'^https?:\/\/.*[\r\n]*', ' ', text, flags=re.MULTILINE)
 
     @staticmethod
+    def remove_digits_and_replace_digits_sign(text):
+        return re.sub(r'[0-9|۰-۹]+', '#Digits#', text, flags=re.MULTILINE)
+
+    @staticmethod
     def remove_english_char_from_text(text):
         return re.sub(r'[a-zA-Z]', ' ', text, flags=re.MULTILINE)
 
     @staticmethod
     def remove_signs(text):
-        for char in string.punctuation:
+        for char in PreprocessUtilities.punctuation:
             text = text.replace(char, ' ')
         return text
 
@@ -69,6 +83,17 @@ class PreprocessUtilities:
         lemma_tokens = [PreprocessUtilities.lemmatizer.lemmatize(w) for w in tokens]
         return " ".join(lemma_tokens)
 
+    @staticmethod
+    def tokenize_text(text):
+        return text.split()
+
+    def process_context(self, context, remove_stop_words=True):
+        for proc in self.pre_processing_functions:
+            context = proc(context)
+        if remove_stop_words:
+            return self.remove_stop_words(self.tokenize_text(context))
+        return self.tokenize_text(context)
+
 
 class FormalAndColloquialDataPreProcessing:
     formal_directory_path = "language_model/data/formal_dataset/"
@@ -84,61 +109,38 @@ class FormalAndColloquialDataPreProcessing:
         with open(self.stop_words_file_path, 'rb') as file:
             stop_words = json.loads(file.read())['stopWords']
         self.preprocess_utils = PreprocessUtilities(stop_words)
-        self.pre_processing_functions = [self.preprocess_utils.remove_emoji_from_text,
-                                         self.preprocess_utils.remove_english_char_from_text,
-                                         self.preprocess_utils.remove_signs,
-                                         self.preprocess_utils.remove_url_from_text,
-                                         self.preprocess_utils.remove_extra_spaces,
-                                         self.preprocess_utils.remove_half_space]
-
-    def bring_custom_text_tokens(self, custom_text):
-        for proc in self.pre_processing_functions:
-            custom_text = proc(custom_text)
-        return [self.tokenize_text(custom_text)]
 
     def bring_processed_formal_tokens(self, file_index: int):
-        # tokenize
-        data = self._load_raw_formal_data(file_index)
-        for context_id in range(len(data)):
-            for proc in self.pre_processing_functions:
-                data[context_id] = proc(data[context_id])
-            yield self.preprocess_utils.remove_stop_words(self.tokenize_text(data[context_id]))
+        for context in self._load_raw_formal_data(file_index):
+            yield self.preprocess_utils.process_context(context)
 
     def bring_processed_colloquial_tokens(self):
-        # tokenize
-        data = self._load_raw_colloquial_data()
-        for context_id in range(len(data)):
-            for proc in self.pre_processing_functions:
-                data[context_id] = proc(data[context_id])
-        return [self.preprocess_utils.remove_stop_words(self.tokenize_text(context)) for context in data]
+        for context in self._load_raw_colloquial_data():
+            yield self.preprocess_utils.process_context(context)
 
     def _load_raw_formal_data(self, file_index):
         with open(self.formal_directory_path + self.formal_file_paths[file_index], 'rb') as file:
-            data_texts = []
+            context_count = 0
             for article in file:
                 article = article.decode('utf-8')
                 if article != "":
                     for context in json.loads(article)['Text'].split("\n"):
-                        data_texts.append(context)
-                    if Constants.DEBUG and len(data_texts) >= test_context_number:
+                        context_count += 1
+                        yield context
+                    if Configs.DEBUG and context_count >= Configs.test_context_number:
                         break
-        return data_texts
 
     def _load_raw_colloquial_data(self):
         with open(self.colloquial_file_path, 'rb') as file:
-            data_texts = []
+            context_count = 0
             for context in file:
                 context = context.decode('utf-8').strip()
                 if context.startswith("RT : "):
                     context = context[5:]
-                data_texts.append(context)
-                if Constants.DEBUG and len(data_texts) >= test_context_number:
+                context_count += 1
+                yield context
+                if Configs.DEBUG and context_count >= Configs.test_context_number:
                     break
-        return data_texts
-
-    @staticmethod
-    def tokenize_text(text):
-        return text.split()
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-from config import Constants
+from config import Configs
 
 
 def _lined(list_string):
@@ -27,11 +27,11 @@ class OutPutMessages:
 
     @staticmethod
     def introducer_has_been_set(introducer_username):
-        return f" معرف شما {Constants.introduce_score} امتیاز گرفت. "
+        return f" معرف شما {Configs.introduce_score} امتیاز گرفت. "
 
     send_introducer_user_name = _lined(["حالا نام کاربری معرفت رو بفرست که امتیاز بگیره.به این شکل:", "@username"])
     wrong_format_for_username = "فرمت نام کاربری اشتباه است"
-    you_have_introduced_a_user = _lined(["تبریک", f"معرف یک نفر شدید و {Constants.introduce_score} امتیاز گرفتید."])
+    you_have_introduced_a_user = _lined(["تبریک", f"معرف یک نفر شدید و {Configs.introduce_score} امتیاز گرفتید."])
     #
     # @staticmethod
     # def use_score_to_get_music(channels):
@@ -58,7 +58,7 @@ class OutPutMessages:
         "ما قصدمون از ایجاد این بات این بوده که بتونیم یک مدل زبانی و دیتاستی از کلمات محاوره ای زبان فارسی ایجاد کنیم.",
         "با این بات شما می تونید به سوال هامون جواب بدید و به کامل شدن داده هامون کمک کنید،",
         " امتیاز کسب کنید و ما برای تشویق در پایان دوره ها به صورت تصادفی کد های تخفیف و جوایزی رو در نظر می گیریم."
-        f"مطمین شو در پایان دوره حداقل امتیاز {Constants.min_score_for_lottery} رو داری تا بتونی در قرعه کشی شرکت کنی."])
+        f"مطمین شو در پایان دوره حداقل امتیاز {Configs.min_score_for_lottery} رو داری تا بتونی در قرعه کشی شرکت کنی."])
     select_one_of_channels = f"اول /{Commands.show_channels} رو بزن و یکی از کانال ها رو انتخاب کن."
 
     @staticmethod
@@ -78,9 +78,9 @@ class OutPutMessages:
 
     not_enough_credit_answer_question_to_get = _lined(
         ["امتیاز کافی برای دریافت موزیک نداری. برای بدست آوردن امتیاز دو راه وجود داره:",
-         "- نام کاربری تلگرامت رو به دوستات بدی که به عنوان معرف وارد کنن." + f" {Constants.introduce_score}$ ",
+         "- نام کاربری تلگرامت رو به دوستات بدی که به عنوان معرف وارد کنن." + f" {Configs.introduce_score}$ ",
          "🤝",
-         "- به سوالات هم معنی خیلی سادمون جواب بدی." + f" {Constants.question_answer_score}$ ",
+         "- به سوالات هم معنی خیلی سادمون جواب بدی." + f" {Configs.question_answer_score}$ ",
          f"🤗 /{Commands.question}"
          ])
     user_not_found_start_first = _lined(["کاربر رو پیدا نمی کنم.", f"از /{Commands.start} شروع کن."])
@@ -104,9 +104,5 @@ class OutPutMessages:
     def you_gave_a_wrong_answer(question_word):
         return _lined([
             "به نظر به سوال مربوط به کلمه " + f"{question_word} " + "جواب اشتباهی رو ارسال کردی.",
-            f"{Constants.question_wrong_answer_score}" + " امتیاز"
+            f"{Configs.question_wrong_answer_score}" + " امتیاز"
         ])
-
-
-if __name__ == '__main__':
-    print(OutPutMessages.use_score_to_get_music(["sss", "sdfsg"]))

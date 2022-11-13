@@ -47,10 +47,10 @@ class ColloquialQuestion(BaseModel):
         return setattr(self, f"choice{i}", value)
 
     def get_choice_score_by_number(self, i):
-        return getattr(self, f"choice{i}")
+        return getattr(self, f"choice{i}_score")
 
     def set_choice_score_by_number(self, i, value):
-        return setattr(self, f"choice{i}", value)
+        return setattr(self, f"choice{i}_score", value)
 
 
 class User(BaseModel):

@@ -4,7 +4,7 @@ import telebot
 
 from constants import OutPutMessages, Commands
 from exceptions import _MyExceptions
-from telegram_client import MusicChannelForResearchClient
+from telegram_client import ResearchTelegramClient
 
 
 async def update_pin_message(client_bot_handler, user_id, chat_id, message_id=None):
@@ -84,31 +84,31 @@ def handler_profile(client_bot_handler):
             await client_bot_handler.telebotConf.bot.send_message(chat_id=chat_id,
                                                                   text=OutPutMessages.wrong_format_for_username)
 
-    @client_bot_handler.telebotConf.bot.message_handler(commands=[Commands.show_channels])
-    async def show_channel_list(message):
-        chat_id = message.chat.id
-        channels = MusicChannelForResearchClient.telegram_music_channels
-        markup = telebot.types.InlineKeyboardMarkup()
-        for ch in channels:
-            markup.add(telebot.types.InlineKeyboardButton(text=ch, callback_data=f'select_channel_{ch}'))
-        await client_bot_handler.telebotConf.bot.send_message(chat_id=chat_id,
-                                                              text=OutPutMessages.use_score_to_get_music(channels),
-                                                              reply_markup=markup)
+    # @client_bot_handler.telebotConf.bot.message_handler(commands=[Commands.show_channels])
+    # async def show_channel_list(message):
+    #     chat_id = message.chat.id
+    #     channels = MusicChannelForResearchClient.telegram_music_channels
+    #     markup = telebot.types.InlineKeyboardMarkup()
+    #     for ch in channels:
+    #         markup.add(telebot.types.InlineKeyboardButton(text=ch, callback_data=f'select_channel_{ch}'))
+    #     await client_bot_handler.telebotConf.bot.send_message(chat_id=chat_id,
+    #                                                           text=OutPutMessages.use_score_to_get_music(channels),
+    #                                                           reply_markup=markup)
 
-    def select_channel_func_condition(call):
-        c = call.data.startswith("select_channel_")
-        c = c and call.data[15:] in MusicChannelForResearchClient.telegram_music_channels
-        return c
+    # def select_channel_func_condition(call):
+    #     c = call.data.startswith("select_channel_")
+    #     c = c and call.data[15:] in MusicChannelForResearchClient.telegram_music_channels
+    #     return c
 
-    @client_bot_handler.telebotConf.bot.callback_query_handler(func=select_channel_func_condition)
-    async def update_channel_for_user(call):
-        await client_bot_handler.telebotConf.bot.edit_message_reply_markup(call.from_user.id,
-                                                                           message_id=call.message.message_id,
-                                                                           reply_markup=None)
-        selected_channel = call.data[15:]
-        client_bot_handler.database_utility.change_user_channel(call.from_user.id, selected_channel)
-        musics = await client_bot_handler.my_client.get_channel_all_music_counts(selected_channel)
-        await client_bot_handler.telebotConf.bot.edit_message_text(
-            OutPutMessages.good_choice_music_condition(selected_channel, musics),
-            call.from_user.id, message_id=call.message.message_id)
-        await update_pin_message(client_bot_handler, call.from_user.id, call.message.chat.id)
+    # @client_bot_handler.telebotConf.bot.callback_query_handler(func=select_channel_func_condition)
+    # async def update_channel_for_user(call):
+    #     await client_bot_handler.telebotConf.bot.edit_message_reply_markup(call.from_user.id,
+    #                                                                        message_id=call.message.message_id,
+    #                                                                        reply_markup=None)
+    #     selected_channel = call.data[15:]
+    #     client_bot_handler.database_utility.change_user_channel(call.from_user.id, selected_channel)
+    #     musics = await client_bot_handler.my_client.get_channel_all_music_counts(selected_channel)
+    #     await client_bot_handler.telebotConf.bot.edit_message_text(
+    #         OutPutMessages.good_choice_music_condition(selected_channel, musics),
+    #         call.from_user.id, message_id=call.message.message_id)
+    #     await update_pin_message(client_bot_handler, call.from_user.id, call.message.chat.id)

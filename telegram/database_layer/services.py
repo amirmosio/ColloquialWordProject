@@ -1,4 +1,5 @@
-from constants import Constants, OutPutMessages
+from utils.FleissKappa import MyWeightedFleissKappa
+from constants import Configs, OutPutMessages
 from exceptions import AlreadyHasIntroducer, IntroducerNotFound, YouIntroducedThisUserCanNotBeenIntroducer, \
     UserNotFound, AnsweredBeforeByTheUser, NoQuestionReadyToAnswerWait
 from models import User, ColloquialQuestion, UserAnswers
@@ -31,13 +32,13 @@ class SqliteQueryServices:
     def get_user_score(self, user_id):
         return self.get_user(user_id).score
 
-    def check_score_for_music(self, user_id):
-        return self.get_user(user_id).score >= Constants.music_cost
+    # def check_score_for_music(self, user_id):
+    #     return self.get_user(user_id).score >= Constants.music_cost
 
-    def take_score_for_music(self, user_id):
-        user = self.get_user(user_id)
-        user.score -= Constants.music_cost
-        user.save()
+    # def take_score_for_music(self, user_id):
+    #     user = self.get_user(user_id)
+    #     user.score -= Constants.music_cost
+    #     user.save()
 
     def get_user_introducer(self, user_id):
         return self.get_user(user_id).introducer_username.lower()
@@ -58,7 +59,7 @@ class SqliteQueryServices:
             user.introducer_username = introducer_username
             user.save()
 
-            introducer_user.score += Constants.introduce_score
+            introducer_user.score += Configs.introduce_score
             introducer_user.save()
             return introducer_user
         else:
@@ -82,7 +83,7 @@ class SqliteQueryServices:
             answer.save()
 
             # add score to use
-            user.score += Constants.question_answer_score
+            user.score += Configs.question_answer_score
             user.save()
         else:
             raise AnsweredBeforeByTheUser()
@@ -94,7 +95,7 @@ class SqliteQueryServices:
         return ColloquialQuestion.get_or_none(request_word=request_word)
 
     def select_a_new_question_for_user(self, user_id):
-        if Constants.DEBUG and not ColloquialQuestion.select().exists():
+        if Configs.DEBUG and not ColloquialQuestion.select().exists():
             self.create_question("test", ["اول", "دوم", "سوم", "چهار", "پنجم", "شیشم", "هفتم", "هشتم", "نهم"])
             self.create_question("test2", ["اول", "دوم", "سوم", "چهار", "پنجم", "شیشم", "هفتم", "هشتم", "نهم"])
         user = self.get_user(user_id)
@@ -108,27 +109,22 @@ class SqliteQueryServices:
         raise NoQuestionReadyToAnswerWait()
 
     def check_question_update_done_with_final_answer_just_get_done(self, question_id):
-        min_user_threshold = 5
-        min_percent_threshold = 0.8
         question = ColloquialQuestion.get(id=question_id)
         if question.done:
             return False
-        answers = question.q_answers
         answer_dict = {}
-        for answer in answers:
+        for answer in question.q_answers:
             answer_dict[answer.choice] = answer_dict.get(answer.choice, 0) + 1
-        total_answers = sum(list(answer_dict.values()))
-        if total_answers <= min_user_threshold:
-            return False
-        percent_dict = {}
-        for key, value in answer_dict:
-            if value / total_answers >= min_percent_threshold:
-                question.done = True
-                question.user_selected_choice = key
-                question.save()
-                # handle wrong answers TODO
+        _, acceptable, selected_options = MyWeightedFleissKappa(answer_dict,
+                                                                [question.get_choice_score_by_number(i) for i in
+                                                                 range(8)])
+        if acceptable:
+            question.done = True
+            question.user_selected_choice = selected_options
+            question.save()
+            # handle wrong answers TODO
 
-                return question
+            return question
         return False
 
     def get_question_wrong_answers(self, done_question_id):
@@ -142,7 +138,7 @@ class SqliteQueryServices:
     def punish_user_with_wrong_answer(self, wrong_user=None, wrong_user_id=None):
         if wrong_user_id:
             wrong_user = self.get_user(wrong_user_id)
-        wrong_user.score += Constants.question_wrong_answer_score
+        wrong_user.score += Configs.question_wrong_answer_score
         wrong_user.save()
 
 

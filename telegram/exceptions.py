@@ -41,7 +41,7 @@ class NoQuestionReadyToAnswerWait(_MyExceptions):
         super().__init__(OutPutMessages.no_question_ready_for_you_wait)
 
 
-def handle_my_exceptions(bot):
+def handle_my_exceptions_for_telegram_bot(bot):
     def func_creator(func):
         async def func_wrapper(message):
             chat_id = message.chat.id
@@ -51,8 +51,23 @@ def handle_my_exceptions(bot):
                 if isinstance(e, _MyExceptions):
                     await bot.send_message(chat_id=chat_id, text=e.message)
                 else:
+                    print("handle_my_exceptions_for_telegram_bot")
                     print(e)
                     await bot.send_message(chat_id=chat_id, text=OutPutMessages.internal_error_call_support)
+
+        return func_wrapper
+
+    return func_creator
+
+
+def handle_my_exceptions_print():
+    def func_creator(func):
+        async def func_wrapper(*args, **kwargs):
+            try:
+                return await func(*args, **kwargs)
+            except Exception as e:
+                print("handle_my_exceptions_print")
+                print(e)
 
         return func_wrapper
 

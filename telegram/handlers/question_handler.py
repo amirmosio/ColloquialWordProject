@@ -1,14 +1,14 @@
 import telebot
 
 from constants import OutPutMessages, Commands
-from exceptions import handle_my_exceptions
+from exceptions import handle_my_exceptions_for_telegram_bot
 from handlers.profile_handler import update_pin_message
 from models import ColloquialQuestion
 
 
 def handler_question(client_bot_handler):
     @client_bot_handler.telebotConf.bot.message_handler(commands=[Commands.question])
-    @handle_my_exceptions(client_bot_handler.telebotConf.bot)
+    @handle_my_exceptions_for_telegram_bot(client_bot_handler.telebotConf.bot)
     async def give_me_question(message):
         chat_id = message.chat.id
         q: ColloquialQuestion = client_bot_handler.database_utility.select_a_new_question_for_user(message.from_user.id)
